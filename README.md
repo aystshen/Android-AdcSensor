@@ -1,7 +1,7 @@
 # Android custom Sensor -- AdcSensor
 This project will show you how to add a custom Sensor on the Android system, including how to modify the driver, hardware, framework, and how the app uses this Sensor.
 
-## Usage
+## Integration
 1. Copy adc to kernel/drivers/input/sensors/ directory.
 2. Modify the kernel/drivers/input/sensors/Kconfig as follows:
 ```
