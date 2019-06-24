@@ -23,6 +23,10 @@ obj-$(CONFIG_SENSORS_ADC) += adc/
 };
 ```
 5. For how to modify hardware and framework, please refer to adcsensor.patch.
+6. update api.
+```
+make update-api
+```
 
 ## Usage
 [Download demo](https://fir.im/1a4h)  
