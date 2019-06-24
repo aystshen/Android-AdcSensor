@@ -70,7 +70,7 @@ if (null != mSensorManager) {
     (at your option) any later version.
 
     This program is distributed in the hope that it will be a reference
-    to you, when you are integrating the android gpio into your system,
+    to you, when you are integrating the ADC sensor into your system,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
     General Public License for more details.
