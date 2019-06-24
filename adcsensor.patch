@@ -1,0 +1,1050 @@
+commit fdcf7ea63347f2c7be958be58e51e2fcff449aa3
+Author: shenhb <shenhb@topband.com.cn>
+Date:   Tue Jun 18 14:01:02 2019 +0800
+
+    „Äêadcsensor„ÄëÂ¢ûÂä†Ëá™ÂÆö‰πâsensorÔºöadcsensorÔºåÁî®‰∫éappËØªÂèñÂ§ñÈÉ®ÁîµÂéãÂÄº
+
+diff --git a/device/rockchip/common/ueventd.rockchip.rc b/device/rockchip/common/ueventd.rockchip.rc
+index e2e6411..6139dba 100755
+--- a/device/rockchip/common/ueventd.rockchip.rc
++++ b/device/rockchip/common/ueventd.rockchip.rc
+@@ -17,6 +17,7 @@
+ /dev/step_c               0660   system     system
+ /dev/step_d               0660   system     system
+ /dev/tilt                 0660   system     system
++/dev/adcsensor            0660   system     system
+ 
+ /dev/ion                  0666   system     system
+ /dev/galcore              0666   system     graphics
+diff --git a/frameworks/base/api/current.txt b/frameworks/base/api/current.txt
+index 0ee1322..d318caf 100644
+--- a/frameworks/base/api/current.txt
++++ b/frameworks/base/api/current.txt
+@@ -12572,6 +12572,7 @@ package android.hardware {
+     field public static final deprecated int RAW_DATA_Y = 4; // 0x4
+     field public static final deprecated int RAW_DATA_Z = 5; // 0x5
+     field public static final deprecated int SENSOR_ACCELEROMETER = 2; // 0x2
++    field public static final deprecated int SENSOR_ADC = 256; // 0x100
+     field public static final deprecated int SENSOR_ALL = 127; // 0x7f
+     field public static final int SENSOR_DELAY_FASTEST = 0; // 0x0
+     field public static final int SENSOR_DELAY_GAME = 1; // 0x1
+@@ -32867,6 +32868,16 @@ package android.view {
+     field public static final int KEYCODE_FORWARD_DEL = 112; // 0x70
+     field public static final int KEYCODE_FUNCTION = 119; // 0x77
+     field public static final int KEYCODE_G = 35; // 0x23
++    field public static final int KEYCODE_GPIO_0 = 275; // 0x113
++    field public static final int KEYCODE_GPIO_1 = 276; // 0x114
++    field public static final int KEYCODE_GPIO_2 = 277; // 0x115
++    field public static final int KEYCODE_GPIO_3 = 278; // 0x116
++    field public static final int KEYCODE_GPIO_4 = 279; // 0x117
++    field public static final int KEYCODE_GPIO_5 = 280; // 0x118
++    field public static final int KEYCODE_GPIO_6 = 281; // 0x119
++    field public static final int KEYCODE_GPIO_7 = 282; // 0x11a
++    field public static final int KEYCODE_GPIO_8 = 283; // 0x11b
++    field public static final int KEYCODE_GPIO_9 = 284; // 0x11c
+     field public static final int KEYCODE_GRAVE = 68; // 0x44
+     field public static final int KEYCODE_GUIDE = 172; // 0xac
+     field public static final int KEYCODE_H = 36; // 0x24
+diff --git a/frameworks/base/api/system-current.txt b/frameworks/base/api/system-current.txt
+index a1baee8..8acd6c5 100644
+--- a/frameworks/base/api/system-current.txt
++++ b/frameworks/base/api/system-current.txt
+@@ -12878,6 +12878,7 @@ package android.hardware {
+     field public static final deprecated int RAW_DATA_Y = 4; // 0x4
+     field public static final deprecated int RAW_DATA_Z = 5; // 0x5
+     field public static final deprecated int SENSOR_ACCELEROMETER = 2; // 0x2
++    field public static final deprecated int SENSOR_ADC = 256; // 0x100
+     field public static final deprecated int SENSOR_ALL = 127; // 0x7f
+     field public static final int SENSOR_DELAY_FASTEST = 0; // 0x0
+     field public static final int SENSOR_DELAY_GAME = 1; // 0x1
+@@ -35101,6 +35102,16 @@ package android.view {
+     field public static final int KEYCODE_FORWARD_DEL = 112; // 0x70
+     field public static final int KEYCODE_FUNCTION = 119; // 0x77
+     field public static final int KEYCODE_G = 35; // 0x23
++    field public static final int KEYCODE_GPIO_0 = 275; // 0x113
++    field public static final int KEYCODE_GPIO_1 = 276; // 0x114
++    field public static final int KEYCODE_GPIO_2 = 277; // 0x115
++    field public static final int KEYCODE_GPIO_3 = 278; // 0x116
++    field public static final int KEYCODE_GPIO_4 = 279; // 0x117
++    field public static final int KEYCODE_GPIO_5 = 280; // 0x118
++    field public static final int KEYCODE_GPIO_6 = 281; // 0x119
++    field public static final int KEYCODE_GPIO_7 = 282; // 0x11a
++    field public static final int KEYCODE_GPIO_8 = 283; // 0x11b
++    field public static final int KEYCODE_GPIO_9 = 284; // 0x11c
+     field public static final int KEYCODE_GRAVE = 68; // 0x44
+     field public static final int KEYCODE_GUIDE = 172; // 0xac
+     field public static final int KEYCODE_H = 36; // 0x24
+diff --git a/frameworks/base/core/java/android/hardware/LegacySensorManager.java b/frameworks/base/core/java/android/hardware/LegacySensorManager.java
+old mode 100644
+new mode 100755
+index f959093..806925e
+--- a/frameworks/base/core/java/android/hardware/LegacySensorManager.java
++++ b/frameworks/base/core/java/android/hardware/LegacySensorManager.java
+@@ -81,6 +81,9 @@ final class LegacySensorManager {
+                     result |= SensorManager.SENSOR_ORIENTATION
+                             | SensorManager.SENSOR_ORIENTATION_RAW;
+                     break;
++                case Sensor.TYPE_ADC:
++                    result |= SensorManager.SENSOR_ADC;
++                    break;
+             }
+         }
+         return result;
+@@ -101,6 +104,8 @@ final class LegacySensorManager {
+                 Sensor.TYPE_ORIENTATION, listener, sensors, rate) || result;
+         result = registerLegacyListener(SensorManager.SENSOR_TEMPERATURE,
+                 Sensor.TYPE_TEMPERATURE, listener, sensors, rate) || result;
++        result = registerLegacyListener(SensorManager.SENSOR_ADC,
++                Sensor.TYPE_ADC, listener, sensors, rate) || result;
+         return result;
+     }
+ 
+@@ -155,6 +160,8 @@ final class LegacySensorManager {
+                 listener, sensors);
+         unregisterLegacyListener(SensorManager.SENSOR_TEMPERATURE, Sensor.TYPE_TEMPERATURE,
+                 listener, sensors);
++        unregisterLegacyListener(SensorManager.SENSOR_ADC, Sensor.TYPE_ADC,
++                listener, sensors);
+     }
+ 
+     private void unregisterLegacyListener(int legacyType, int type,
+diff --git a/frameworks/base/core/java/android/hardware/Sensor.java b/frameworks/base/core/java/android/hardware/Sensor.java
+old mode 100644
+new mode 100755
+index cf6a779..18927e7
+--- a/frameworks/base/core/java/android/hardware/Sensor.java
++++ b/frameworks/base/core/java/android/hardware/Sensor.java
+@@ -512,6 +512,23 @@ public final class Sensor {
+     public static final String STRING_TYPE_PICK_UP_GESTURE = "android.sensor.pick_up_gesture";
+ 
+     /**
++     * A constant describing a pick up sensor.
++     *
++     * Custom ADC sensor, for get the voltage value.
++     *
++     * @hide Expected to be used internally for always on display.
++     */
++    public static final int TYPE_ADC = 26;
++
++    /**
++     * A constant string describing a pick up sensor.
++     *
++     * @hide This sensor is expected to be used internally for always on display.
++     * @see #TYPE_ADC
++     */
++    public static final String STRING_TYPE_ADC = "android.sensor.adc";
++
++    /**
+      * A constant describing all sensor types.
+      */
+     public static final int TYPE_ALL = -1;
+diff --git a/frameworks/base/core/java/android/hardware/SensorManager.java b/frameworks/base/core/java/android/hardware/SensorManager.java
+old mode 100644
+new mode 100755
+index e4e5a8c..63d46dc
+--- a/frameworks/base/core/java/android/hardware/SensorManager.java
++++ b/frameworks/base/core/java/android/hardware/SensorManager.java
+@@ -164,6 +164,15 @@ public abstract class SensorManager {
+     public static final int SENSOR_ORIENTATION_RAW = 1 << 7;
+ 
+     /**
++     * A constant describing an adc sensor. See
++     * {@link android.hardware.SensorListener SensorListener} for more details.
++     *
++     * @deprecated use {@link android.hardware.Sensor Sensor} instead.
++     */
++    @Deprecated
++    public static final int SENSOR_ADC = 1 << 8;
++
++    /**
+      * A constant that includes all sensors
+      *
+      * @deprecated use {@link android.hardware.Sensor Sensor} instead.
+diff --git a/frameworks/native/include/android/sensor.h b/frameworks/native/include/android/sensor.h
+old mode 100644
+new mode 100755
+index d58c460..3ca6287
+--- a/frameworks/native/include/android/sensor.h
++++ b/frameworks/native/include/android/sensor.h
+@@ -59,7 +59,8 @@ enum {
+     ASENSOR_TYPE_MAGNETIC_FIELD     = 2,
+     ASENSOR_TYPE_GYROSCOPE          = 4,
+     ASENSOR_TYPE_LIGHT              = 5,
+-    ASENSOR_TYPE_PROXIMITY          = 8
++    ASENSOR_TYPE_PROXIMITY          = 8,
++    ASENSOR_TYPE_ADC                = 26
+ };
+ 
+ /*
+@@ -160,6 +161,7 @@ typedef struct ASensorEvent {
+             ASensorVector   acceleration;
+             ASensorVector   magnetic;
+             float           temperature;
++            float           voltage;
+             float           distance;
+             float           light;
+             float           pressure;
+diff --git a/frameworks/native/include/gui/Sensor.h b/frameworks/native/include/gui/Sensor.h
+old mode 100644
+new mode 100755
+index 28a08e2..37b5958
+--- a/frameworks/native/include/gui/Sensor.h
++++ b/frameworks/native/include/gui/Sensor.h
+@@ -49,7 +49,8 @@ public:
+         TYPE_MAGNETIC_FIELD = ASENSOR_TYPE_MAGNETIC_FIELD,
+         TYPE_GYROSCOPE      = ASENSOR_TYPE_GYROSCOPE,
+         TYPE_LIGHT          = ASENSOR_TYPE_LIGHT,
+-        TYPE_PROXIMITY      = ASENSOR_TYPE_PROXIMITY
++        TYPE_PROXIMITY      = ASENSOR_TYPE_PROXIMITY,
++        TYPE_ADC            = ASENSOR_TYPE_ADC
+     };
+ 
+             Sensor();
+diff --git a/hardware/libhardware/include/hardware/sensors.h b/hardware/libhardware/include/hardware/sensors.h
+old mode 100644
+new mode 100755
+index f0773d5..6f38243
+--- a/hardware/libhardware/include/hardware/sensors.h
++++ b/hardware/libhardware/include/hardware/sensors.h
+@@ -603,6 +603,15 @@ enum {
+ #define SENSOR_STRING_TYPE_PICK_UP_GESTURE                     "android.sensor.pick_up_gesture"
+ 
+ /**
++ * SENSOR_TYPE_ADC
++ * reporting-mode: one-shot
++ *
++ * Custom ADC sensor, for get the voltage value.
++ */
++#define SENSOR_TYPE_ADC                                        (26)
++#define SENSOR_STRING_TYPE_ADC                                 "android.sensor.adc"
++
++/**
+  * Values returned by the accelerometer in various locations in the universe.
+  * all values are in SI units (m/s^2)
+  */
+@@ -728,6 +737,9 @@ typedef struct sensors_event_t {
+             /* temperature is in degrees centigrade (Celsius) */
+             float           temperature;
+ 
++            /* voltage values are in voltage(mV)*/
++            float           voltage;
++
+             /* distance in centimeters */
+             float           distance;
+ 
+diff --git a/hardware/rockchip/sensor/st/AdcSensor.cpp b/hardware/rockchip/sensor/st/AdcSensor.cpp
+new file mode 100755
+index 0000000..8a5e4c3
+--- /dev/null
++++ b/hardware/rockchip/sensor/st/AdcSensor.cpp
+@@ -0,0 +1,159 @@
++/*********************************************************************************
++* Copyright(C), 2019-2025, ayst.shen@foxmail.com
++* FileName: AdcSensor.cpp
++* Author: Shen Haibo
++* Version: 1.0.0
++* Date: 2019-6-18
++* Description:
++*     Custom ADC sensor, for get the voltage value.
++*
++* Revision:
++*     Date:
++*     Reviser:
++*     Description:
++*********************************************************************************/
++
++
++#include <fcntl.h>
++#include <errno.h>
++#include <math.h>
++#include <poll.h>
++#include <unistd.h>
++#include <dirent.h>
++#include <math.h>
++#include <sys/select.h>
++#include <cutils/log.h>
++#include <utils/BitSet.h>
++#include <cutils/properties.h>
++#include <linux/ioctl.h>
++
++#include "AdcSensor.h"
++
++#define ADC_IOC_MAGIC               'a'
++
++#define ADC_IOC_ENABLE              _IOW(ADC_IOC_MAGIC, 1, int)
++#define ADC_IOC_SET_RATE            _IOW(ADC_IOC_MAGIC, 2, int)
++
++AdcSensor::AdcSensor()
++    : SensorBase(ADC_DEVICE_NAME, "adcsensor"),
++      mEnabled(0),
++      mInputReader(32)
++{
++    mPendingEvent.version = sizeof(sensors_event_t);
++    mPendingEvent.sensor = ID_ADC;
++    mPendingEvent.type = SENSOR_TYPE_ADC;
++    memset(mPendingEvent.data, 0x00, sizeof(mPendingEvent.data));
++
++    int err = 0;
++    err = open_device();
++    err = err < 0 ? -errno : 0;
++    if (err) {
++        LOGE("%s:%s\n", __func__, strerror(-err));
++        return;
++    }
++}
++
++AdcSensor::~AdcSensor()
++{
++    if (mEnabled) {
++        enable(0, 0);
++    }
++
++    if (dev_fd > 0) {
++        close(dev_fd);
++        dev_fd = -1;
++    }
++}
++
++int AdcSensor::enable(int32_t, int en)
++{
++    int newState = en ? 1 : 0;
++    int err = 0;
++
++    if (newState != mEnabled) {
++        if (dev_fd < 0) {
++            open_device();
++        }
++
++        if (0 > (err = ioctl(dev_fd, ADC_IOC_ENABLE, &newState))) {
++            LOGE("fail to perform ADC_IOC_ENABLE, err = %d, error is '%s'", err, strerror(errno));
++            goto EXIT;
++        }
++
++        mEnabled = newState;
++    }
++
++EXIT:
++    return err;
++}
++
++int AdcSensor::setDelay(int32_t handle, int64_t ns)
++{
++    int err = 0;
++
++    if (ns < 0) {
++        return -EINVAL;
++    }
++
++    if (dev_fd < 0) {
++        open_device();
++    }
++
++    short delay = ns / 1000000;
++
++    if ((err = ioctl(dev_fd, ADC_IOC_SET_RATE, &delay)) < 0) {
++        LOGE("fail to perform ADC_IOC_SET_RATE, result = %d, error is '%s'", err, strerror(errno));
++    }
++
++    return err;
++}
++
++int AdcSensor::isActivated(int /* handle */)
++{
++    return mEnabled;
++}
++
++int AdcSensor::readEvents(sensors_event_t* data, int count)
++{
++    if (count < 1) {
++        return -EINVAL;
++    }
++
++    ssize_t n = mInputReader.fill(data_fd);
++    if (n < 0) {
++        return n;
++    }
++
++    int numEventReceived = 0;
++    input_event const* event;
++
++    while (count && mInputReader.readEvent(&event)) {
++        int type = event->type;
++
++        LOGI("AdcSensor: read event (type=%d, code=%d)", type, event->code);
++
++        if (type == EV_REL) {
++            processEvent(event->code, event->value);
++        } else if (type == EV_SYN) {
++            mPendingEvent.timestamp = getTimestamp();
++            *data++ = mPendingEvent;
++            count--;
++            numEventReceived++;
++        } else {
++            LOGE("AdcSensor: unknown event (type=%d, code=%d)", type, event->code);
++        }
++
++        mInputReader.next();
++    }
++
++    return numEventReceived;
++}
++
++void AdcSensor::processEvent(int code, int value)
++{
++    switch (code) {
++        case EVENT_TYPE_ADC:
++            mPendingEvent.voltage = value;
++            break;
++    }
++}
+diff --git a/hardware/rockchip/sensor/st/AdcSensor.h b/hardware/rockchip/sensor/st/AdcSensor.h
+new file mode 100755
+index 0000000..f502e15
+--- /dev/null
++++ b/hardware/rockchip/sensor/st/AdcSensor.h
+@@ -0,0 +1,48 @@
++/*********************************************************************************
++* Copyright(C), 2019-2025, ayst.shen@foxmail.com
++* FileName: AdcSensor.h
++* Author: Shen Haibo
++* Version: 1.0.0
++* Date: 2019-6-18
++* Description:
++*     Custom ADC sensor, for get the voltage value.
++*
++* Revision:
++*     Date:
++*     Reviser:
++*     Description:
++*********************************************************************************/
++
++
++#ifndef ANDROID_ADC_SENSOR_H
++#define ANDROID_ADC_SENSOR_H
++
++#include <stdint.h>
++#include <errno.h>
++#include <sys/cdefs.h>
++#include <sys/types.h>
++
++#include "nusensors.h"
++#include "SensorBase.h"
++#include "InputEventReader.h"
++
++struct input_event;
++
++class AdcSensor : public SensorBase
++{
++    private:
++        int mEnabled;
++        InputEventCircularReader mInputReader;
++        sensors_event_t mPendingEvent;
++
++    public:
++        AdcSensor();
++        virtual ~AdcSensor();
++        virtual int readEvents(sensors_event_t* data, int count);
++        void processEvent(int code, int value);
++        virtual int setDelay(int32_t handle, int64_t ns);
++        virtual int enable(int32_t handle, int enabled);
++        virtual int isActivated(int handle);
++};
++
++#endif  // ANDROID_ADC_SENSOR_H
+diff --git a/hardware/rockchip/sensor/st/Android.mk b/hardware/rockchip/sensor/st/Android.mk
+index 50b2364..f602c90 100755
+--- a/hardware/rockchip/sensor/st/Android.mk
++++ b/hardware/rockchip/sensor/st/Android.mk
+@@ -41,6 +41,7 @@ LOCAL_SRC_FILES := 						\
+ 				ProximitySensor.cpp		\
+ 				PressureSensor.cpp		\
+ 				TemperatureSensor.cpp		\
++				AdcSensor.cpp
+ 				
+ LOCAL_SHARED_LIBRARIES := liblog \
+ 	libcutils \
+diff --git a/hardware/rockchip/sensor/st/nusensors.cpp b/hardware/rockchip/sensor/st/nusensors.cpp
+index f6fbd36..c71f07c 100755
+--- a/hardware/rockchip/sensor/st/nusensors.cpp
++++ b/hardware/rockchip/sensor/st/nusensors.cpp
+@@ -36,6 +36,7 @@
+ #include "GyroSensor.h"
+ #include "PressureSensor.h"
+ #include "TemperatureSensor.h"
++#include "AdcSensor.h"
+ 
+ #if defined(CALIBRATION_SUPPORT)
+ typedef		unsigned short	    uint16;
+@@ -158,6 +159,7 @@ private:
+         gyro            = 4, 
+         pressure        = 5,
+         temperature		= 6,
++        adc             = 7,
+         numSensorDrivers,
+         numFds,
+     };
+@@ -185,6 +187,8 @@ private:
+ 				return pressure;
+ 			case ID_TMP:
+ 				return temperature;
++            case ID_ADC:
++				return adc;
+         }
+         return -EINVAL;
+     }
+@@ -232,6 +236,11 @@ sensors_poll_context_t::sensors_poll_context_t()
+     mPollFds[temperature].events = POLLIN;
+     mPollFds[temperature].revents = 0;
+ 
++    mSensors[adc] = new AdcSensor();
++    mPollFds[adc].fd = mSensors[adc]->getFd();
++    mPollFds[adc].events = POLLIN;
++    mPollFds[adc].revents = 0;
++
+     int wakeFds[2];
+     int result = pipe(wakeFds);
+     LOGE_IF(result<0, "error creating wake pipe (%s)", strerror(errno));
+diff --git a/hardware/rockchip/sensor/st/nusensors.h b/hardware/rockchip/sensor/st/nusensors.h
+index 5aab787..e6d8edd 100755
+--- a/hardware/rockchip/sensor/st/nusensors.h
++++ b/hardware/rockchip/sensor/st/nusensors.h
+@@ -61,6 +61,7 @@ int init_nusensors(hw_module_t const* module, hw_device_t** device);
+ #define ID_GY   (5)
+ #define ID_PR   (6)
+ #define ID_TMP  (7)
++#define ID_ADC  (8)
+ 
+ /*****************************************************************************/
+ 
+@@ -81,6 +82,7 @@ int init_nusensors(hw_module_t const* module, hw_device_t** device);
+ #define GY_DEVICE_NAME      LSM6DS3_GYRO_DEV_PATH
+ #define PR_DEVICE_NAME      "/dev/pressure"
+ #define TMP_DEVICE_NAME     "/dev/temperature"
++#define ADC_DEVICE_NAME     "/dev/adcsensor"
+ 
+ // for LSM6DS3
+ #define GSENSOR_IOC_ENABLE          LSM6DS3_IOC_ENABLE
+@@ -115,7 +117,7 @@ int init_nusensors(hw_module_t const* module, hw_device_t** device);
+ 
+ #define EVENT_TYPE_PRESSURE         ABS_PRESSURE
+ 
+-
++#define EVENT_TYPE_ADC              REL_MISC
+ 
+ /** ±Ì’˜œ‡Õ¨µƒ º”ÀŸ∂»ŒÔ¿Ì¡øµƒ ±∫Ú, Android …œ≤„ π”√µƒ  ˝÷µ ∫Õ sensor  ˝æ›…Ë±∏ÀÕ≥ˆµƒ  ˝÷µ µƒ ±»÷µ. */
+ #define ACCELERATION_RATIO_ANDROID_TO_HW        (9.80665f / 1000000)
+diff --git a/hardware/rockchip/sensor/st/sensors.c b/hardware/rockchip/sensor/st/sensors.c
+index ad06d0b..9ca012e 100755
+--- a/hardware/rockchip/sensor/st/sensors.c
++++ b/hardware/rockchip/sensor/st/sensors.c
+@@ -32,7 +32,7 @@
+ 
+ static const struct sensor_t sSensorList[] = {
+ 
+-        { .name       = "Gravity sensor",
++    { .name       = "Gravity sensor",
+           .vendor     = "The Android Open Source Project",
+           .version    = 1,
+           .handle     = SENSORS_HANDLE_BASE+ID_A,
+@@ -129,7 +129,18 @@ static const struct sensor_t sSensorList[] = {
+           .minDelay   = 5000,
+           .reserved   = {}
+         },
+-		
++
++    { .name       = "Adc sensor",
++          .vendor     = "The Android Open Source Project",
++          .version    = 1,
++          .handle     = SENSORS_HANDLE_BASE+ID_ADC,
++          .type       = SENSOR_TYPE_ADC,
++          .maxRange   = 110000.0f,
++          .resolution = 1.0f,
++          .power      = 1.0f,
++          .minDelay   = 5000,
++          .reserved   = {}
++        },
+ };
+ 
+ static int open_sensors(const struct hw_module_t* module, const char* name,
+diff --git a/kernel/arch/arm/boot/dts/topband-mj28-v2-tianting.dts b/kernel/arch/arm/boot/dts/topband-mj28-v2-tianting.dts
+index 58d0b6f..90b2a43 100755
+--- a/kernel/arch/arm/boot/dts/topband-mj28-v2-tianting.dts
++++ b/kernel/arch/arm/boot/dts/topband-mj28-v2-tianting.dts
+@@ -47,6 +47,15 @@
+ 	};
+ };
+ 
++&adc {
++	status = "okay";
++
++	adcsensor: adcsensor {
++		compatible = "adcsensor";
++		io-channels = <&adc 2>;
++	};
++};
++
+ &fiq_debugger {
+ 	status = "disabled";
+ };
+diff --git a/kernel/arch/arm/configs/topband_mj28_defconfig b/kernel/arch/arm/configs/topband_mj28_defconfig
+index eaf2a17..bb88565 100755
+--- a/kernel/arch/arm/configs/topband_mj28_defconfig
++++ b/kernel/arch/arm/configs/topband_mj28_defconfig
+@@ -1213,6 +1213,7 @@ CONFIG_INV_SENSORS_PRESSURE=y
+ # CONFIG_MPU_SENSORS_BMA085 is not set
+ # CONFIG_MPU_USERSPACE_DEBUG is not set
+ CONFIG_INPUT_LSM6DS3=y
++CONFIG_SENSORS_ADC=y
+ 
+ #
+ # Texas Instruments shared transport line discipline
+diff --git a/kernel/drivers/input/sensors/Kconfig b/kernel/drivers/input/sensors/Kconfig
+index 6ed2835..833a4a4 100755
+--- a/kernel/drivers/input/sensors/Kconfig
++++ b/kernel/drivers/input/sensors/Kconfig
+@@ -19,5 +19,6 @@ source "drivers/input/sensors/temperature/Kconfig"
+ source "drivers/input/sensors/pressure/Kconfig"
+ source "drivers/input/sensors/hall/Kconfig"
+ source "drivers/input/sensors/lsm6ds3/Kconfig"
++source "drivers/input/sensors/adc/Kconfig"
+ 
+ endif
+diff --git a/kernel/drivers/input/sensors/Makefile b/kernel/drivers/input/sensors/Makefile
+index ceac109..cc9970d 100755
+--- a/kernel/drivers/input/sensors/Makefile
++++ b/kernel/drivers/input/sensors/Makefile
+@@ -9,6 +9,7 @@ obj-$(CONFIG_TEMPERATURE_DEVICE)		+= temperature/
+ obj-$(CONFIG_PRESSURE_DEVICE)			+= pressure/
+ obj-$(CONFIG_HALL_DEVICE)			+= hall/
+ obj-$(CONFIG_INPUT_LSM6DS3)			+= lsm6ds3/
++obj-$(CONFIG_SENSORS_ADC)			+= adc/
+ 
+ 
+ obj-$(CONFIG_SENSOR_DEVICE)				+= sensor-i2c.o
+diff --git a/kernel/drivers/input/sensors/adc/Kconfig b/kernel/drivers/input/sensors/adc/Kconfig
+new file mode 100755
+index 0000000..059f1d5
+--- /dev/null
++++ b/kernel/drivers/input/sensors/adc/Kconfig
+@@ -0,0 +1,8 @@
++config SENSORS_ADC
++         tristate "ADC sensor"
++         help
++           This driver support the ADC sensor.
++
++           To compile this driver as a module, choose M here. The module
++	   will be called adc.
++
+diff --git a/kernel/drivers/input/sensors/adc/Makefile b/kernel/drivers/input/sensors/adc/Makefile
+new file mode 100755
+index 0000000..6afdb57
+--- /dev/null
++++ b/kernel/drivers/input/sensors/adc/Makefile
+@@ -0,0 +1,2 @@
++obj-$(CONFIG_SENSORS_ADC) += adcsensor.o
++
+diff --git a/kernel/drivers/input/sensors/adc/adcsensor.c b/kernel/drivers/input/sensors/adc/adcsensor.c
+new file mode 100755
+index 0000000..123dc56
+--- /dev/null
++++ b/kernel/drivers/input/sensors/adc/adcsensor.c
+@@ -0,0 +1,399 @@
++/*
++ * ADC Sensor driver
++ *
++ * Copyright  (C)  2016 - 2017 Topband. Ltd.
++ *
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License as published by
++ * the Free Software Foundation; either version 2 of the License, or
++ * (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be a reference
++ * to you, when you are integrating the ADC sensor into your system,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++ * General Public License for more details.
++ *
++ * Author: shenhaibo
++ * Version: 1.0.0
++ * Release Date: 2019/6/17
++ */
++
++#include <linux/module.h>
++#include <linux/init.h>
++#include <linux/device.h>
++#include <linux/errno.h>
++#include <linux/err.h>
++#include <linux/kernel.h>
++#include <linux/ctype.h>
++#include <linux/delay.h>
++#include <linux/idr.h>
++#include <linux/sched.h>
++#include <linux/slab.h>
++#include <linux/interrupt.h>
++#include <linux/signal.h>
++#include <linux/pm.h>
++#include <linux/notifier.h>
++#include <linux/fb.h>
++#include <linux/input.h>
++#include <linux/ioport.h>
++#include <linux/io.h>
++#include <linux/clk.h>
++#include <linux/pinctrl/consumer.h>
++#include <linux/platform_device.h>
++#include <linux/kthread.h>
++#include <linux/time.h>
++#include <linux/timer.h>
++#include <linux/regulator/consumer.h>
++#include <linux/gpio.h>
++#include <linux/of.h>
++#include <linux/of_irq.h>
++#include <linux/of_gpio.h>
++#include <linux/of_platform.h>
++#include <linux/miscdevice.h>
++#include <linux/uaccess.h>
++#include <linux/adc.h>
++#include <linux/slab.h>
++#include <linux/wakelock.h>
++
++#include <linux/iio/iio.h>
++#include <linux/iio/machine.h>
++#include <linux/iio/driver.h>
++#include <linux/iio/consumer.h>
++
++
++#define ADC_SENSOR_NAME "adcsensor"
++
++// ioctl cmd
++#define ADC_SENSOR_IOC_MAGIC  'a'
++
++#define ADC_SENSOR_IOC_ENABLE _IOW(ADC_SENSOR_IOC_MAGIC, 1, int)
++#define ADC_SENSOR_IOC_SET_RATE _IOW(ADC_SENSOR_IOC_MAGIC, 2, int)
++
++#define ADC_SENSOR_IOC_MAXNR 2
++
++#define EMPTY_ADVALUE			950
++#define DRIFT_ADVALUE			70
++#define INVALID_ADVALUE			-1
++
++#define POLL_INTERVAL_DEFAULT   1000
++
++#define HZ_TO_PERIOD_NSEC(hz)		(1000 * 1000 * 1000 / ((u32)(hz)))
++#define MS_TO_US(x)			({ typeof(x) _x = (x); ((_x) * \
++							((typeof(x)) 1000));})
++#define US_TO_NS(x)			(MS_TO_US(x))
++#define MS_TO_NS(x)			(US_TO_NS(MS_TO_US(x)))
++#define US_TO_MS(x)			({ typeof(x) _x = (x); ((_x) / \
++							((typeof(x)) 1000));})
++#define NS_TO_US(x)			(US_TO_MS(x))
++#define NS_TO_MS(x)			(US_TO_MS(NS_TO_US(x)))
++
++struct adc_sensor_data {
++    struct platform_device *platform_dev;
++    struct miscdevice adc_sensor_device;
++    struct input_dev *input_dev;
++    struct iio_channel *chan;
++
++    bool enabled;
++    unsigned int poll_interval;
++    struct hrtimer hr_timer;
++    struct work_struct input_work;
++    ktime_t ktime;
++};
++
++struct adc_sensor_data *g_adc;
++
++static struct workqueue_struct *adc_sensor_workqueue = 0;
++
++static int adc_sensor_enable(struct adc_sensor_data *adc) {
++    hrtimer_start(&adc->hr_timer, adc->ktime, HRTIMER_MODE_REL);
++    adc->enabled = true;
++    return 0;
++}
++
++static int adc_sensor_disable(struct adc_sensor_data *adc) {
++    cancel_work_sync(&adc->input_work);
++    hrtimer_cancel(&adc->hr_timer);
++    adc->enabled = false;
++    return 0;
++}
++
++static int adc_sensor_parse_dt(struct device *dev,
++                               struct adc_sensor_data *adc)
++{
++    struct iio_channel *chan;
++
++    chan = iio_channel_get(dev, NULL);
++    if (IS_ERR(chan)) {
++        dev_info(dev, "no io-channels defined\n");
++        return -EINVAL;
++    }
++    adc->chan = chan;
++
++    return 0;
++}
++
++static int adc_sensor_request_input_dev(struct adc_sensor_data *adc)
++{
++    int ret = -1;
++
++    adc->input_dev = input_allocate_device();
++    if (adc->input_dev == NULL) {
++        dev_err(&adc->platform_dev->dev, "Failed to to allocate input device\n");
++        return -ENOMEM;
++    }
++
++    adc->input_dev->name = ADC_SENSOR_NAME;
++    input_set_drvdata(adc->input_dev, adc);
++
++    input_set_capability(adc->input_dev, EV_REL, REL_MISC);
++
++    ret = input_register_device(adc->input_dev);
++    if (ret) {
++        dev_err(&adc->platform_dev->dev, "Register %s input device failed\n",
++                adc->input_dev->name);
++        input_free_device(adc->input_dev);
++        return -ENODEV;
++    }
++
++    return 0;
++}
++
++static int adc_sensor_dev_open(struct inode *inode, struct file *filp)
++{
++    int ret = 0;
++
++    struct adc_sensor_data *adc = container_of(filp->private_data,
++                                  struct adc_sensor_data,
++                                  adc_sensor_device);
++    filp->private_data = adc;
++    dev_info(&adc->platform_dev->dev,
++             "device node major=%d, minor=%d\n", imajor(inode), iminor(inode));
++
++    return ret;
++}
++
++static long adc_sensor_dev_ioctl(struct file *pfile,
++                                 unsigned int cmd, unsigned long arg)
++{
++    int ret = 0;
++    int data = 0;
++    struct adc_sensor_data *adc = pfile->private_data;
++
++    if (_IOC_TYPE(cmd) != ADC_SENSOR_IOC_MAGIC) {
++        return -EINVAL;
++    }
++    if (_IOC_NR(cmd) > ADC_SENSOR_IOC_MAXNR) {
++        return -EINVAL;
++    }
++
++    if (_IOC_DIR(cmd) & _IOC_READ) {
++        ret = !access_ok(VERIFY_WRITE, (void *)arg, _IOC_SIZE(cmd));
++    } else if (_IOC_DIR(cmd) & _IOC_WRITE) {
++        ret = !access_ok(VERIFY_READ, (void *)arg, _IOC_SIZE(cmd));
++    }
++    if (ret) {
++        return -EFAULT;
++    }
++
++    if (copy_from_user(&data, (int *)arg, sizeof(int))) {
++        dev_err(&adc->platform_dev->dev,
++                "%s, copy from user failed\n", __func__);
++        return -EFAULT;
++    }
++
++    dev_info(&adc->platform_dev->dev,
++             "%s, (%x, %lx): data=%d\n", __func__, cmd,
++             arg, data);
++
++    switch (cmd) {
++        case ADC_SENSOR_IOC_ENABLE:
++            if (data > 0) {
++                adc_sensor_enable(adc);
++            } else {
++                adc_sensor_disable(adc);
++            }
++            break;
++
++        case ADC_SENSOR_IOC_SET_RATE:
++            break;
++
++        default:
++            return -EINVAL;
++    }
++
++    return ret;
++}
++
++static const struct file_operations adc_sensor_dev_fops = {
++    .owner = THIS_MODULE,
++    .open = adc_sensor_dev_open,
++    .unlocked_ioctl = adc_sensor_dev_ioctl
++};
++
++static int adc_sensor_adc_iio_read(struct adc_sensor_data *adc)
++{
++    struct iio_channel *channel = adc->chan;
++    int val, ret;
++
++    if (!channel) {
++        return INVALID_ADVALUE;
++    }
++
++    ret = iio_read_channel_raw(channel, &val);
++    if (ret < 0) {
++        dev_err(&adc->platform_dev->dev,
++                "%s, read channel error: %d\n", __func__, ret);
++        return ret;
++    }
++
++    return val;
++}
++
++static void adc_sensor_report_event(struct adc_sensor_data *adc, s32 data)
++{
++    struct input_dev *input = adc->input_dev;
++
++    if (!adc->enabled) {
++        return;
++    }
++
++    input_report_rel(input, REL_MISC, data);
++    input_sync(input);
++}
++
++enum hrtimer_restart adc_sensor_poll_function_read(struct hrtimer *timer)
++{
++    struct adc_sensor_data *adc;
++
++    adc = container_of((struct hrtimer *)timer, struct adc_sensor_data, hr_timer);
++
++    queue_work(adc_sensor_workqueue, &adc->input_work);
++
++    return HRTIMER_NORESTART;
++}
++
++static void poll_function_work(struct work_struct *input_work)
++{
++    int ret;
++    struct adc_sensor_data *adc;
++
++    adc = container_of((struct work_struct *)input_work,
++                       struct adc_sensor_data, input_work);
++
++    hrtimer_start(&adc->hr_timer, adc->ktime, HRTIMER_MODE_REL);
++
++    ret = adc_sensor_adc_iio_read(adc);
++    dev_info(&adc->platform_dev->dev, "%s, iio read: %d\n", __func__, ret);
++    if (ret > INVALID_ADVALUE && ret < EMPTY_ADVALUE) {
++        adc_sensor_report_event(adc, ret);
++    }
++}
++
++static int adc_sensor_init(struct adc_sensor_data *adc)
++{
++    hrtimer_init(&adc->hr_timer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
++    adc->hr_timer.function = &adc_sensor_poll_function_read;
++
++    adc->poll_interval = POLL_INTERVAL_DEFAULT;
++    adc->ktime = ktime_set(0, MS_TO_NS(adc->poll_interval));
++    INIT_WORK(&adc->input_work, poll_function_work);
++
++    return 0;
++}
++
++static int adc_sensor_probe(struct platform_device *pdev)
++{
++    int ret = 0;
++    struct adc_sensor_data *adc;
++
++    adc = devm_kzalloc(&pdev->dev, sizeof(*adc), GFP_KERNEL);
++    if (adc == NULL) {
++        dev_err(&pdev->dev, "Failed to alloc ts memory");
++        return -ENOMEM;
++    }
++
++    g_adc = adc;
++
++    if (pdev->dev.of_node) {
++        ret = adc_sensor_parse_dt(&pdev->dev, adc);
++        if (ret) {
++            dev_err(&pdev->dev, "Failed to parse dts\n");
++            goto exit_free_data;
++        }
++    }
++
++    adc->platform_dev = pdev;
++
++    ret = adc_sensor_request_input_dev(adc);
++    if (ret < 0) {
++        dev_err(&pdev->dev, "Failed to register input device\n");
++        goto exit_free_data;
++    }
++
++    platform_set_drvdata(pdev, adc);
++
++    if(adc_sensor_workqueue == 0)
++		adc_sensor_workqueue = create_workqueue("adc_sensor_workqueue");
++
++    ret = adc_sensor_init(adc);
++    if (ret < 0) {
++        dev_err(&pdev->dev, "failed to init sensor\n");
++		goto exit_unreg_input_dev;
++	}
++
++    adc->adc_sensor_device.minor = MISC_DYNAMIC_MINOR;
++    adc->adc_sensor_device.name = ADC_SENSOR_NAME;
++    adc->adc_sensor_device.fops = &adc_sensor_dev_fops;
++
++    ret = misc_register(&adc->adc_sensor_device);
++    if (ret) {
++        dev_err(&pdev->dev, "Failed to misc_register\n");
++        goto exit_unreg_input_dev;
++    }
++
++    dev_info(&pdev->dev, "%s, over\n", __func__);
++    return 0;
++
++exit_unreg_input_dev:
++    input_unregister_device(adc->input_dev);
++
++exit_free_data:
++    devm_kfree(&pdev->dev, adc);
++
++    return ret;
++}
++
++static int adc_sensor_remove(struct platform_device *pdev)
++{
++    struct adc_sensor_data *adc = platform_get_drvdata(pdev);
++    
++    input_unregister_device(adc->input_dev);
++    kfree(adc);
++
++    return 0;
++}
++
++static const struct of_device_id adc_sensor_of_match[] = {
++    { .compatible =  "adcsensor"},
++    {},
++};
++
++MODULE_DEVICE_TABLE(of, adc_sensor_of_match);
++
++static struct platform_driver adc_sensor_driver = {
++    .probe = adc_sensor_probe,
++    .remove = adc_sensor_remove,
++    .driver = {
++        .name = ADC_SENSOR_NAME,
++        .owner  = THIS_MODULE,
++        .of_match_table = adc_sensor_of_match,
++    },
++};
++
++module_platform_driver(adc_sensor_driver);
++
++MODULE_AUTHOR("shenhb@topband.com.cn");
++MODULE_DESCRIPTION("ADC Sensor for appcation to detect battery voltage");
++MODULE_VERSION("1.0");
++MODULE_LICENSE("GPL");

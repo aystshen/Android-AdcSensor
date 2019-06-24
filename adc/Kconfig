@@ -1,0 +1,8 @@
+config SENSORS_ADC
+         tristate "ADC sensor"
+         help
+           This driver support the ADC sensor.
+
+           To compile this driver as a module, choose M here. The module
+	   will be called adc.
+
